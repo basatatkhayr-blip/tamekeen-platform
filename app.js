@@ -224,22 +224,46 @@ function validateContact(data) {
   return errors;
 }
 
-// ----- 📥 DATABASE OPERATORS (SUPABASE CRUD) -----
+// ----- 📥 DATABASE OPERATORS (SUPABASE CRUD VIA NATIVE FETCH) -----
+
+// Dynamic Auth Headers helper to extract logged-in JWT for RLS security enforcement
+async function getAuthHeaders() {
+  if (!supabaseClient) {
+    return {
+      "apikey": SUPABASE_KEY,
+      "Authorization": `Bearer ${SUPABASE_KEY}`,
+      "Content-Type": "application/json",
+      "Prefer": "return=representation"
+    };
+  }
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  const token = session?.access_token || SUPABASE_KEY;
+  return {
+    "apikey": SUPABASE_KEY,
+    "Authorization": `Bearer ${token}`,
+    "Content-Type": "application/json",
+    "Prefer": "return=representation"
+  };
+}
 
 // Fetch all contacts (representing Contacts) from Supabase
 async function fetchContacts() {
-  if (!supabaseClient) return [];
-  const { data, error } = await supabaseClient
-    .from("contacts")
-    .select("*")
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-  return data || [];
+  if (!SUPABASE_URL) return [];
+  const headers = await getAuthHeaders();
+  const res = await window.fetch(`${SUPABASE_URL}/rest/v1/contacts?select=*&order=created_at.desc`, {
+    method: "GET",
+    headers
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.message || `HTTP error ${res.status}`);
+  }
+  return await res.json();
 }
 
 // Insert new contact
 async function insertContact(contactData) {
-  if (!supabaseClient) throw new Error("خدمة الاتصال بقاعدة البيانات غير متصلة.");
+  if (!SUPABASE_URL || !supabaseClient) throw new Error("خدمة الاتصال بقاعدة البيانات غير متصلة.");
   
   // Fetch current user from auth state
   const { data: { user } } = await supabaseClient.auth.getUser();
@@ -258,24 +282,30 @@ async function insertContact(contactData) {
     }
   }
   
-  const { data, error } = await supabaseClient
-    .from("contacts")
-    .insert([contactData])
-    .select()
-    .single();
-    
-  if (error) {
-    if (error.code === "23505") { // Unique key constraint in Postgres
+  const headers = await getAuthHeaders();
+  headers["Prefer"] = "return=representation";
+  
+  const res = await window.fetch(`${SUPABASE_URL}/rest/v1/contacts`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(contactData)
+  });
+  
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    if (res.status === 409 || errData.code === "23505") { // Unique key constraint
       throw new Error("عذراً، هذا البريد الإلكتروني مسجل مسبقاً بقاعدة بيانات منصة تمكين.");
     }
-    throw error;
+    throw new Error(errData.message || `HTTP error ${res.status}`);
   }
-  return data;
+  
+  const insertedData = await res.json();
+  return Array.isArray(insertedData) ? insertedData[0] : insertedData;
 }
 
 // Update contact details
 async function updateContact(id, contactData) {
-  if (!supabaseClient) throw new Error("خدمة الاتصال بقاعدة البيانات غير متصلة.");
+  if (!SUPABASE_URL) throw new Error("خدمة الاتصال بقاعدة البيانات غير متصلة.");
   
   // Client duplicate email check (excluding itself, only if email is provided)
   if (contactData.email) {
@@ -285,30 +315,41 @@ async function updateContact(id, contactData) {
     }
   }
   
-  const { data, error } = await supabaseClient
-    .from("contacts")
-    .update(contactData)
-    .eq("id", id)
-    .select()
-    .single();
-    
-  if (error) {
-    if (error.code === "23505") {
+  const headers = await getAuthHeaders();
+  headers["Prefer"] = "return=representation";
+  
+  const res = await window.fetch(`${SUPABASE_URL}/rest/v1/contacts?id=eq.${id}`, {
+    method: "PATCH",
+    headers,
+    body: JSON.stringify(contactData)
+  });
+  
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    if (res.status === 409 || errData.code === "23505") {
       throw new Error("عذراً، هذا البريد الإلكتروني مسجل مسبقاً لجهة اتصال أخرى في قاعدة البيانات.");
     }
-    throw error;
+    throw new Error(errData.message || `HTTP error ${res.status}`);
   }
-  return data;
+  
+  const updatedData = await res.json();
+  return Array.isArray(updatedData) ? updatedData[0] : updatedData;
 }
 
 // Delete contact from Supabase
 async function deleteContactFromDb(id) {
-  if (!supabaseClient) throw new Error("خدمة الاتصال بقاعدة البيانات غير متصلة.");
-  const { error } = await supabaseClient
-    .from("contacts")
-    .delete()
-    .eq("id", id);
-  if (error) throw error;
+  if (!SUPABASE_URL) throw new Error("خدمة الاتصال بقاعدة البيانات غير متصلة.");
+  const headers = await getAuthHeaders();
+  
+  const res = await window.fetch(`${SUPABASE_URL}/rest/v1/contacts?id=eq.${id}`, {
+    method: "DELETE",
+    headers
+  });
+  
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.message || `HTTP error ${res.status}`);
+  }
   return true;
 }
 
