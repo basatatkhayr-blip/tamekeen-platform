@@ -45,14 +45,57 @@ window.addEventListener('unhandledrejection', function(e) {
 const { SUPABASE_URL, SUPABASE_KEY } = window.APP_CONFIG || {};
 let supabaseClient = null;
 
+// Safe storage adapter to prevent errors/hangs when Tracking Prevention blocks localStorage
+const safeMemoryStorage = {
+  store: {},
+  getItem(key) {
+    try {
+      return window.localStorage.getItem(key);
+    } catch (e) {
+      console.warn("⚠️ LocalStorage read blocked by browser security/tracking prevention. Using in-memory fallback.");
+      return this.store[key] || null;
+    }
+  },
+  setItem(key, value) {
+    try {
+      window.localStorage.setItem(key, value);
+    } catch (e) {
+      console.warn("⚠️ LocalStorage write blocked by browser security/tracking prevention. Using in-memory fallback.");
+      this.store[key] = value;
+    }
+  },
+  removeItem(key) {
+    try {
+      window.localStorage.removeItem(key);
+    } catch (e) {
+      delete this.store[key];
+    }
+  }
+};
+
 if (SUPABASE_URL && SUPABASE_KEY && SUPABASE_KEY !== "PASTE_MY_SUPABASE_KEY_HERE") {
   if (window.supabase) {
-    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    try {
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+        auth: {
+          storage: safeMemoryStorage,
+          persistSession: true,
+          detectSessionInUrl: true
+        }
+      });
+    } catch (clientErr) {
+      console.error("❌ Failed to initialize Supabase Client with storage, falling back to in-memory only:", clientErr);
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+        auth: {
+          persistSession: false
+        }
+      });
+    }
   } else {
     console.error("❌ Supabase library is not loaded from CDN.");
   }
 } else {
-  console.warn("⚠️ Supabase credentials missing in /public/config.js");
+  console.warn("⚠️ Supabase credentials missing in config.js");
 }
 
 // ----- 📦 STATE MANAGEMENT -----
