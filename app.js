@@ -1345,8 +1345,62 @@ function initDiagnostics() {
     <div id="diag-err-box" style="margin-top: 8px; color: #f87171; font-size: 11px; max-height: 80px; overflow-y: auto; word-break: break-all; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 6px; display: none;">
       <strong>Error:</strong> <span id="diag-err-text"></span>
     </div>
+    <div id="diag-console-box" style="margin-top: 8px; max-height: 120px; overflow-y: auto; font-family: monospace; font-size: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px; display: none;">
+      <strong style="color: #38bdf8; display: block; margin-bottom: 2px;">Console Logs:</strong>
+    </div>
   `;
   document.body.appendChild(diag);
+
+  // Intercept and print console events dynamically to assist real-time debugging
+  const oldConsoleLog = console.log;
+  const oldConsoleWarn = console.warn;
+  const oldConsoleError = console.error;
+
+  const logToDiag = (msg, color = "#f8fafc") => {
+    const box = document.getElementById("diag-console-box");
+    if (box) {
+      box.style.display = "block";
+      const div = document.createElement("div");
+      div.style.borderBottom = "1px dashed rgba(255,255,255,0.05)";
+      div.style.padding = "2px 0";
+      div.style.color = color;
+      div.style.whiteSpace = "pre-wrap";
+      div.style.wordBreak = "break-all";
+      div.textContent = typeof msg === 'object' ? JSON.stringify(msg) : String(msg);
+      
+      // Insert after the title header
+      if (box.children.length > 1) {
+        box.insertBefore(div, box.children[1]);
+      } else {
+        box.appendChild(div);
+      }
+      
+      // Limit to 10 lines
+      if (box.children.length > 11) {
+        box.removeChild(box.lastChild);
+      }
+    }
+  };
+
+  console.log = function(...args) {
+    oldConsoleLog.apply(console, args);
+    logToDiag(args.join(" "), "#38bdf8");
+  };
+  console.warn = function(...args) {
+    oldConsoleWarn.apply(console, args);
+    logToDiag(args.join(" "), "#fbbf24");
+  };
+  console.error = function(...args) {
+    oldConsoleError.apply(console, args);
+    logToDiag(args.join(" "), "#f87171");
+  };
+
+  window.addEventListener('error', function(e) {
+    logToDiag(`JS Error: ${e.message} at ${e.filename}:${e.lineno}`, "#f87171");
+  });
+  window.addEventListener('unhandledrejection', function(e) {
+    logToDiag(`Promise Rejection: ${e.reason?.message || e.reason || 'Unhandled rejection'}`, "#f87171");
+  });
 
   // Update static fields immediately
   const protocol = window.location.protocol;
