@@ -589,9 +589,13 @@ async function refreshApplicationState() {
   const container = $("#contactsContainer");
   const recentTableBody = $("#recentContactsTable");
   
+  if (typeof updateDiagContacts === 'function') updateDiagContacts("Fetching...", "#f59e0b");
+  
   try {
     // Fetch
     state.contacts = await fetchContacts();
+    
+    if (typeof updateDiagContacts === 'function') updateDiagContacts(`Loaded (${state.contacts.length}) ✓`, "#10b981");
     
     // Render
     renderDashboard();
@@ -607,6 +611,9 @@ async function refreshApplicationState() {
   } catch (err) {
     console.error("❌ Application database connection error:", err);
     toast("خطأ أثناء الاتصال بخادم قاعدة بيانات منصة تمكين", "error");
+    
+    if (typeof updateDiagContacts === 'function') updateDiagContacts("Failed ❌", "#ef4444");
+    if (typeof showDiagError === 'function') showDiagError(err.message || String(err));
     
     const dbStatus = $("#dbStatus");
     if (dbStatus) {
@@ -1083,6 +1090,8 @@ async function initAuth() {
     const allowedEmail = (window.APP_CONFIG?.ALLOWED_EMAIL || "").trim().toLowerCase();
 
     if (session) {
+      if (typeof updateDiagAuth === 'function') updateDiagAuth(session.user.email, "#10b981");
+      
       // Layer 2 Security: If authenticated email doesn't match the allowed email, force logout
       if (allowedEmail && session.user?.email && session.user.email.trim().toLowerCase() !== allowedEmail) {
         console.warn("⚠️ Unauthorized session blocked:", session.user.email);
@@ -1105,6 +1114,8 @@ async function initAuth() {
       // Load and refresh state
       await refreshApplicationState();
     } else {
+      if (typeof updateDiagAuth === 'function') updateDiagAuth("Logged Out", "#ef4444");
+      
       // User is Unauthenticated
       if (adminWrapper) adminWrapper.style.display = "none";
       if (loginWrapper) loginWrapper.style.display = "flex";
@@ -1238,6 +1249,13 @@ async function initAuth() {
 
 // ----- 🚀 APP BOOTSTRAP -----
 async function bootstrap() {
+  // تهيئة لوحة التشخيص المرئية لتتبع حالة الأخطاء
+  try {
+    initDiagnostics();
+  } catch (diagErr) {
+    console.warn("⚠️ Failed to initialize diagnostics layout:", diagErr);
+  }
+
   if (supabaseClient) {
     await initAuth();
   } else {
@@ -1254,9 +1272,94 @@ async function bootstrap() {
     banner.style.width = "100%";
     banner.style.zIndex = "999999";
     banner.style.boxShadow = "0 4px 8px rgba(0,0,0,0.1)";
-    banner.textContent = "⚠️ عذراً: تعذر الاتصال بـ Supabase. يرجى تهيئة المفاتيح بشكل صحيح في public/config.js وتنشيط الإنترنت.";
+    banner.textContent = "⚠️ عذراً: تعذر الاتصال بـ Supabase. يرجى تهيئة المفاتيح بشكل صحيح وتنشيط الإنترنت.";
     document.body.appendChild(banner);
+    
+    if (typeof showDiagError === 'function') {
+      showDiagError("Supabase credentials missing or invalid in config.js");
+    }
   }
 }
 
+// ----- 🛠️ VISUAL DIAGNOSTICS SYSTEM IMPLEMENTATION -----
+function initDiagnostics() {
+  const diag = document.createElement("div");
+  diag.id = "tamekeen-diagnostics";
+  diag.style.cssText = "position: fixed; bottom: 10px; left: 10px; z-index: 999999; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); color: #f8fafc; padding: 12px 18px; border-radius: 12px; font-family: system-ui, -apple-system, sans-serif; font-size: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); width: 290px; direction: ltr; text-align: left;";
+  diag.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px;">
+      <strong style="color: #10b981; font-size: 13px;">🛠️ Tamekeen Diagnostics</strong>
+      <button onclick="document.getElementById('tamekeen-diagnostics').remove()" style="background: none; border: none; color: #ef4444; cursor: pointer; font-weight: bold; font-size: 14px; padding: 0 4px;">✕</button>
+    </div>
+    <div style="display: grid; grid-template-columns: 110px 1fr; gap: 4px; line-height: 1.4;">
+      <span>Config:</span><strong id="diag-config" style="color: #ef4444;">Not Loaded</strong>
+      <span>Supabase Url:</span><strong id="diag-url" style="color: #ef4444;">None</strong>
+      <span>Supabase Client:</span><strong id="diag-client" style="color: #ef4444;">Not Init</strong>
+      <span>User Auth:</span><strong id="diag-auth" style="color: #f59e0b;">Checking...</strong>
+      <span>Database Fetch:</span><strong id="diag-contacts" style="color: #f59e0b;">Waiting...</strong>
+      <span>Protocol:</span><strong id="diag-protocol" style="color: #3b82f6;">Unknown</strong>
+    </div>
+    <div id="diag-err-box" style="margin-top: 8px; color: #f87171; font-size: 11px; max-height: 80px; overflow-y: auto; word-break: break-all; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 6px; display: none;">
+      <strong>Error:</strong> <span id="diag-err-text"></span>
+    </div>
+  `;
+  document.body.appendChild(diag);
+
+  // Update static fields immediately
+  const protocol = window.location.protocol;
+  document.getElementById("diag-protocol").textContent = protocol;
+  if (protocol === "file:") {
+    document.getElementById("diag-protocol").style.color = "#f59e0b";
+    document.getElementById("diag-protocol").textContent = "file:// (Blocked Storage)";
+  } else {
+    document.getElementById("diag-protocol").style.color = "#10b981";
+  }
+
+  if (window.APP_CONFIG) {
+    document.getElementById("diag-config").textContent = "Loaded ✓";
+    document.getElementById("diag-config").style.color = "#10b981";
+    document.getElementById("diag-url").textContent = window.APP_CONFIG.SUPABASE_URL ? "Defined ✓" : "Missing ❌";
+    document.getElementById("diag-url").style.color = window.APP_CONFIG.SUPABASE_URL ? "#10b981" : "#ef4444";
+  } else {
+    document.getElementById("diag-config").textContent = "Missing ❌";
+    document.getElementById("diag-config").style.color = "#ef4444";
+  }
+
+  if (supabaseClient) {
+    document.getElementById("diag-client").textContent = "Initialized ✓";
+    document.getElementById("diag-client").style.color = "#10b981";
+  } else {
+    document.getElementById("diag-client").textContent = "Failed ❌";
+    document.getElementById("diag-client").style.color = "#ef4444";
+  }
+}
+
+function updateDiagAuth(text, color) {
+  const el = document.getElementById("diag-auth");
+  if (el) {
+    el.textContent = text;
+    if (color) el.style.color = color;
+  }
+}
+
+function updateDiagContacts(text, color) {
+  const el = document.getElementById("diag-contacts");
+  if (el) {
+    el.textContent = text;
+    if (color) el.style.color = color;
+  }
+}
+
+function showDiagError(errText) {
+  const box = document.getElementById("diag-err-box");
+  const txt = document.getElementById("diag-err-text");
+  if (box && txt) {
+    box.style.display = "block";
+    txt.textContent = errText;
+  }
+  // Also link to window error display
+  console.error("Diagnostic Error Captured:", errText);
+}
+
 bootstrap();
+
