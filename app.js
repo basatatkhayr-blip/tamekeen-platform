@@ -236,8 +236,20 @@ async function getAuthHeaders() {
       "Prefer": "return=representation"
     };
   }
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  const token = session?.access_token || SUPABASE_KEY;
+  
+  let token = SUPABASE_KEY;
+  
+  // Use globally cached session to prevent deadlocks inside onAuthStateChange
+  if (window.APP_SESSION?.access_token) {
+    token = window.APP_SESSION.access_token;
+  } else {
+    // Only call getSession if we really have to (fallback)
+    const { data: { session } } = await supabaseClient.auth.getSession().catch(() => ({ data: {} }));
+    if (session?.access_token) {
+      token = session.access_token;
+    }
+  }
+  
   return {
     "apikey": SUPABASE_KEY,
     "Authorization": `Bearer ${token}`,
@@ -1188,6 +1200,7 @@ async function initAuth() {
   // Listen to Auth State Changes
   supabaseClient.auth.onAuthStateChange(async (event, session) => {
     console.log(`🔐 Auth event: ${event}`, session);
+    window.APP_SESSION = session; // Cache session globally to prevent getSession() deadlocks
     
     const loginWrapper = $("#loginWrapper");
     const adminWrapper = $("#adminWrapper");
@@ -1304,7 +1317,7 @@ async function initAuth() {
 
   // Bind Logout Button with Global Event Delegation & Ultra-Defensive Fallback
   document.addEventListener("click", async (e) => {
-    const logoutBtn = e.target.closest("#logoutBtn");
+    const logoutBtn = e.target.closest("#logoutBtn, #mobileLogoutBtn");
     if (logoutBtn) {
       e.preventDefault();
       console.log("🚪 [تمكين - أمان] تم الضغط على زر تسجيل الخروج");
@@ -1353,12 +1366,7 @@ async function initAuth() {
 
 // ----- 🚀 APP BOOTSTRAP -----
 async function bootstrap() {
-  // تهيئة لوحة التشخيص المرئية لتتبع حالة الأخطاء
-  try {
-    initDiagnostics();
-  } catch (diagErr) {
-    console.warn("⚠️ Failed to initialize diagnostics layout:", diagErr);
-  }
+
 
   if (supabaseClient) {
     await initAuth();

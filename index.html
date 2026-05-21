@@ -7,6 +7,13 @@
   <title>منصة تمكين - دليل إدارة وتواصل الأمانات</title>
   <meta name="description"
     content="نظام إدارة جهات تواصل داخلي لفرق تمكين والمتابعة وأعضاء الأمانات" />
+    
+  <!-- Mobile Web App Meta Tags -->
+  <meta name="theme-color" content="#0f766e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -119,9 +126,10 @@
         </div>
 
         <div class="top-nav-left">
+          <button id="mobileLogoutBtn" class="mobile-logout-btn" title="تسجيل الخروج" aria-label="تسجيل الخروج">🚪</button>
           <div class="connection-status connected" id="dbStatus">
             <span class="status-dot"></span>
-            <span class="status-text">متصل بقاعدة البيانات</span>
+            <span class="status-text hide-mobile">متصل بقاعدة البيانات</span>
           </div>
         </div>
       </header>
