@@ -635,6 +635,26 @@ async function refreshApplicationState() {
   if (typeof updateDiagContacts === 'function') updateDiagContacts("Fetching...", "#f59e0b");
   
   try {
+    // Diagnostic manual fetch test
+    console.log("🌐 Diagnostic: Starting manual HTTP fetch test to Supabase...");
+    window.fetch(`${SUPABASE_URL}/rest/v1/contacts?select=*`, {
+      method: "GET",
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`
+      }
+    })
+    .then(res => {
+      console.log(`🌐 Diagnostic: Manual fetch status = ${res.status} (${res.statusText})`);
+      return res.json();
+    })
+    .then(data => {
+      console.log(`🌐 Diagnostic: Manual fetch success! Found ${data.length} records.`);
+    })
+    .catch(err => {
+      console.error(`❌ Diagnostic: Manual fetch failed:`, err.message || err);
+    });
+
     // Fetch
     state.contacts = await fetchContacts();
     
