@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>منصة تمكين - دليل إدارة وتواصل الأمانات</title>
+  <meta name="description"
+    content="نظام إدارة جهات تواصل داخلي لفرق تمكين والمتابعة وأعضاء الأمانات" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+
+<body>
+
+  <!-- Login Screen Wrapper -->
+  <div class="login-wrapper" id="loginWrapper" style="display: none;">
+    <div class="login-card glass">
+      <div class="login-header">
+        <div class="logo-icon">ت</div>
+        <h2>دخول منصة تمكين</h2>
+        <p class="muted">دليل تواصل الأمانات وإدارة جهات التواصل</p>
+      </div>
+
+      <div class="login-alert info-alert">
+        <span>🔒</span>
+        <p>هذه المنصة مخصصة للأعضاء المصرح لهم فقط. يرجى استخدام بيانات الحساب المزودة من قبل المسؤول للولوج.</p>
+      </div>
+
+      <form id="loginForm" class="form" novalidate>
+        <div class="field">
+          <label for="l-email">البريد الإلكتروني</label>
+          <div class="input-with-icon">
+            <span class="input-icon">📧</span>
+            <input type="email" id="l-email" placeholder="example@domain.com" dir="ltr" required autocomplete="email" />
+          </div>
+          <span class="error-msg" id="err-login-email"></span>
+        </div>
+
+        <div class="field">
+          <label for="l-password">كلمة المرور</label>
+          <div class="input-with-icon">
+            <span class="input-icon">🔑</span>
+            <input type="password" id="l-password" placeholder="••••••••" dir="ltr" required autocomplete="current-password" />
+          </div>
+          <span class="error-msg" id="err-login-password"></span>
+        </div>
+
+        <button type="submit" id="loginSubmitBtn" class="btn-primary w-full mt-16">
+          <span>تسجيل الدخول</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- App Main Wrapper -->
+  <div class="admin-wrapper" id="adminWrapper" style="display: none;">
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-wrap">
+          <div class="logo-icon">ت</div>
+          <div>
+            <h2>منصة تمكين</h2>
+            <span class="logo-badge">إدارة جهات التواصل</span>
+          </div>
+        </div>
+        <button class="close-sidebar-btn" id="closeSidebar" aria-label="إغلاق القائمة">✕</button>
+      </div>
+
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-tab="dashboard">
+          <span class="nav-icon">📊</span>
+          <span>لوحة التحكم</span>
+        </button>
+
+        <button class="nav-item" data-tab="search">
+          <span class="nav-icon">🔍</span>
+          <span>البحث السريع</span>
+        </button>
+
+        <button class="nav-item" data-tab="add">
+          <span class="nav-icon">➕</span>
+          <span>إضافة جهة تواصل</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="footer-meta">
+          <p>منصة تمكين &copy; 2026</p>
+          <span class="version-lbl">الإصدار 2.0</span>
+        </div>
+        <button id="logoutBtn" class="btn-logout" title="تسجيل الخروج">
+          <span class="logout-icon">🚪</span>
+          <span>تسجيل الخروج</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Sidebar Backdrop for Mobile Drawer -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+    <!-- Content Area Wrapper -->
+    <div class="main-layout">
+
+      <!-- Top navbar for mobile and general actions -->
+      <header class="top-navbar">
+        <div class="top-nav-right">
+          <button class="menu-toggle-btn" id="menuToggle" aria-label="افتح القائمة">
+            ☰
+          </button>
+          <div class="page-title-wrap">
+            <h1 id="pageHeading">لوحة التحكم</h1>
+            <p id="pageSubheading" class="muted">إحصائيات وقراءات سريعة لجهات التواصل المسجلة</p>
+          </div>
+        </div>
+
+        <div class="top-nav-left">
+          <div class="connection-status connected" id="dbStatus">
+            <span class="status-dot"></span>
+            <span class="status-text">متصل بقاعدة البيانات</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Dashboard Content Container -->
+      <main class="content-container">
+
+        <!-- Tab 1: Dashboard View -->
+        <section class="tab-content active" id="tab-dashboard">
+
+          <!-- Statistics Cards Grid -->
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon-wrap bg-primary-soft">
+                <span class="stat-icon">👥</span>
+              </div>
+              <div class="stat-info">
+                <span class="stat-label">إجمالي جهات التواصل</span>
+                <h3 id="statTotalContacts" class="stat-value">-</h3>
+              </div>
+              <div class="stat-indicator positive">نشط</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon-wrap bg-success-soft">
+                <span class="stat-icon">📧</span>
+              </div>
+              <div class="stat-info">
+                <span class="stat-label">عناوين البريد الإلكتروني</span>
+                <h3 id="statTotalEmails" class="stat-value">-</h3>
+              </div>
+              <div class="stat-indicator positive">مفعل</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon-wrap bg-warning-soft">
+                <span class="stat-icon">📞</span>
+              </div>
+              <div class="stat-info">
+                <span class="stat-label">أرقام الجوالات المسجلة</span>
+                <h3 id="statTotalPhones" class="stat-value">-</h3>
+              </div>
+              <div class="stat-indicator positive">موثق</div>
+            </div>
+          </div>
+
+          <!-- Dynamic Distribution Cards & Quick Actions -->
+          <div class="dashboard-grid">
+
+            <!-- Dynamic Distributions Card -->
+            <div class="card glass">
+              <div class="card-head">
+                <h3>📊 توزيع جهات التواصل</h3>
+                <p class="muted">حسب الحالة والجهات النشطة</p>
+              </div>
+              <div class="dist-container">
+                <div class="dist-group">
+                  <h4>حسب الحالة:</h4>
+                  <div class="dist-pills" id="statusDistributions">
+                    <span class="placeholder-dist">جاري التحميل...</span>
+                  </div>
+                </div>
+
+                <div class="dist-group">
+                  <h4>حسب الجهات الأكثر تفاعلاً:</h4>
+                  <div class="dist-pills" id="cityDistributions">
+                    <span class="placeholder-dist">جاري التحميل...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Search Shortcut & Quick Actions -->
+            <div class="card glass flex-col-card">
+              <div class="card-head">
+                <h3>⚡ إجراءات سريعة</h3>
+                <p class="muted">الوصول السريع والتنسيق الفوري</p>
+              </div>
+              <div class="quick-actions-wrap">
+                <p class="quick-intro">يمكنك استخدام محرك البحث السريع للتصفية والفلترة حسب الأمانة، الجهة، أو الاسم للوصول لبيانات الاتصال المطلوبة.</p>
+                <button class="btn-primary w-full" id="shortcutSearchBtn">
+                  <span>🔍</span>
+                  <span>البحث السريع والتصفية</span>
+                </button>
+
+                <button class="btn-ghost w-full" id="shortcutAddBtn">
+                  <span>➕</span>
+                  <span>إضافة جهة تواصل جديدة</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Recently Added List Section -->
+          <div class="card glass table-card mt-24">
+            <div class="card-head flex-row-head">
+              <div>
+                <h3>🕒 آخر البيانات المضافة</h3>
+                <p class="muted">أحدث جهات الاتصال التي تم تسجيلها مؤخراً</p>
+              </div>
+              <button class="btn-link" id="viewAllRecentBtn">عرض الكل ←</button>
+            </div>
+
+            <div class="recent-table-wrap">
+              <table class="recent-table">
+                <thead>
+                  <tr>
+                    <th>الاسم</th>
+                    <th>الجهة</th>
+                    <th>المسمى الوظيفي</th>
+                    <th>الأمانة</th>
+                    <th>رقم الجوال</th>
+                    <th>البريد الإلكتروني</th>
+                    <th>تاريخ الإضافة</th>
+                  </tr>
+                </thead>
+                <tbody id="recentContactsTable">
+                  <tr>
+                    <td colspan="7" class="loading-td">جاري تحميل البيانات...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- Tab 2: Advanced Search View -->
+        <section class="tab-content" id="tab-search">
+
+          <!-- Sticky Search & Filter Container -->
+          <div class="search-sticky-card glass">
+
+            <!-- Unified Smart Search Text Box -->
+            <div class="search-bar-row">
+              <div class="search-input-wrap">
+                <span class="search-input-icon">🔍</span>
+                <input type="search" id="contactsSearch" placeholder="البحث (بالاسم، البريد الإلكتروني، رقم الجوال، الجهة، المسمى، الأمانة...)"
+                  autocomplete="off" />
+              </div>
+            </div>
+
+            <!-- Dynamic Dropdown Filter Rows -->
+            <div class="filters-row">
+              <div class="filter-item">
+                <label for="filterAmanah">تصفية حسب الأمانة</label>
+                <select id="filterAmanah" class="filter-select">
+                  <option value="">جميع الأمانات</option>
+                  <option value="الرياض">الرياض</option>
+                  <option value="الاحساء">الاحساء</option>
+                  <option value="الباحة">الباحة</option>
+                  <option value="الجوف">الجوف</option>
+                  <option value="الحدود الشمالية">الحدود الشمالية</option>
+                  <option value="حائل">حائل</option>
+                  <option value="القصيم">القصيم</option>
+                  <option value="المدينة المنورة">المدينة المنورة</option>
+                  <option value="المنطقة الشرقية">المنطقة الشرقية</option>
+                  <option value="تبوك">تبوك</option>
+                  <option value="جازان">جازان</option>
+                  <option value="جدة">جدة</option>
+                  <option value="نجران">نجران</option>
+                  <option value="مكة المكرمة">مكة المكرمة</option>
+                  <option value="عسير">عسير</option>
+                </select>
+              </div>
+
+              <div class="filter-item">
+                <label for="filterCity">تصفية حسب الجهة</label>
+                <select id="filterCity" class="filter-select">
+                  <option value="">الكل</option>
+                </select>
+              </div>
+
+              <div class="filter-item">
+                <label for="filterStatus">حالة التواصل</label>
+                <select id="filterStatus" class="filter-select">
+                  <option value="">تصفية النتائج</option>
+                  <option value="new">جديد</option>
+                  <option value="active">نشط</option>
+                  <option value="inactive">غير نشط</option>
+                </select>
+              </div>
+
+              <div class="filter-actions">
+                <button class="btn-reset" id="resetFiltersBtn" title="إعادة تعيين الفلاتر">
+                  🔄 إعادة تعيين
+                </button>
+              </div>
+            </div>
+
+            <!-- Search Status Bar -->
+            <div class="search-status-bar">
+              <span id="resultsCount">نتائج البحث...</span>
+            </div>
+
+          </div>
+
+          <!-- Contacts Grid Container -->
+          <div id="contactsContainer" class="mt-20">
+            <div class="loading">
+              <div class="spinner"></div>
+              <span>جاري تحميل جهات التواصل...</span>
+            </div>
+          </div>
+
+          <!-- Pagination Component -->
+          <div class="pagination-container" id="paginationWrap">
+            <div class="page-size-selector">
+              <label for="pageSizeSelect">عدد العناصر بالصفحة:</label>
+              <select id="pageSizeSelect" class="page-select-inline">
+                <option value="5">5</option>
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+              </select>
+            </div>
+
+            <div class="pagination-nav">
+              <button class="btn-page" id="prevPageBtn" disabled>السابق</button>
+              <span class="page-num-lbl" id="pageNumLabel">صفحة - من -</span>
+              <button class="btn-page" id="nextPageBtn" disabled>التالي</button>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- Tab 3: Add Contact View -->
+        <section class="tab-content" id="tab-add">
+          <div class="card glass max-width-form">
+            <div class="card-head">
+              <h2>إضافة جهة تواصل</h2>
+              <p class="muted">تسجيل جهة تواصل أو شخصية جديدة في دليل منصة تمكين</p>
+            </div>
+
+            <form id="addContactForm" class="form" novalidate>
+              <div class="form-grid">
+
+                <!-- Full Width Note -->
+                <div class="field field-full label-description">
+                  <p>ملاحظة: يتطلب الحفظ إدخال البريد الإلكتروني أو رقم الجوال على الأقل.</p>
+                </div>
+
+                <!-- Field 1: Name -->
+                <div class="field">
+                  <label for="c-name">الاسم</label>
+                  <input type="text" id="c-name" placeholder="أدخل الاسم بالكامل" maxlength="100" />
+                  <span class="error-msg" id="err-name"></span>
+                </div>
+
+                <!-- Field 2: Email -->
+                <div class="field">
+                  <label for="c-email">البريد الإلكتروني</label>
+                  <input type="email" id="c-email" placeholder="example@domain.com" dir="ltr" maxlength="150" />
+                  <span class="error-msg" id="err-email"></span>
+                </div>
+
+                <!-- Field 3: Phone -->
+                <div class="field">
+                  <label for="c-phone">رقم الجوال</label>
+                  <input type="tel" id="c-phone" placeholder="05xxxxxxxx" dir="ltr" maxlength="20" />
+                  <span class="error-msg" id="err-phone"></span>
+                </div>
+
+                <!-- Field 4: Amanah -->
+                <div class="field">
+                  <label for="c-amanah">الأمانة</label>
+                  <select id="c-amanah" class="form-select">
+                    <option value="" disabled selected>اختر الأمانة</option>
+                    <option value="الرياض">الرياض</option>
+                    <option value="الاحساء">الاحساء</option>
+                    <option value="الباحة">الباحة</option>
+                    <option value="الجوف">الجوف</option>
+                    <option value="الحدود الشمالية">الحدود الشمالية</option>
+                    <option value="حائل">حائل</option>
+                    <option value="القصيم">القصيم</option>
+                    <option value="المدينة المنورة">المدينة المنورة</option>
+                    <option value="المنطقة الشرقية">المنطقة الشرقية</option>
+                    <option value="تبوك">تبوك</option>
+                    <option value="جازان">جازان</option>
+                    <option value="جدة">جدة</option>
+                    <option value="نجران">نجران</option>
+                    <option value="مكة المكرمة">مكة المكرمة</option>
+                    <option value="عسير">عسير</option>
+                  </select>
+                  <span class="error-msg" id="err-amanah"></span>
+                </div>
+
+                <!-- Field 5: Org ( الجهة ) mapping to city column -->
+                <div class="field">
+                  <label for="c-city">الجهة</label>
+                  <input type="text" id="c-city" placeholder="اسم الأمانة أو الجهة (مثال: أمانة جدة)" maxlength="100" />
+                  <span class="error-msg" id="err-city"></span>
+                </div>
+
+                <!-- Field 6: Job Title ( custom input parsed in notes ) -->
+                <div class="field">
+                  <label for="c-job">المسمى الوظيفي</label>
+                  <input type="text" id="c-job" placeholder="مثال: مدير إدارة، منسق تواصل" maxlength="100" />
+                </div>
+
+                <!-- Field 7: Notes -->
+                <div class="field field-full">
+                  <label for="c-notes">ملاحظات</label>
+                  <textarea id="c-notes" rows="4" placeholder="تفاصيل وملاحظات إضافية للتواصل..."
+                    maxlength="1000"></textarea>
+                </div>
+              </div>
+
+              <div class="form-actions border-top mt-16">
+                <button type="submit" id="submitBtn" class="btn-primary">إضافة</button>
+                <button type="button" id="resetBtn" class="btn-ghost">مسح البيانات</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- Edit Contact Modal Dialog -->
+  <div class="modal-overlay" id="editContactModal" aria-hidden="true" role="dialog">
+    <div class="modal-card animate-scaleIn">
+      <div class="modal-header">
+        <div>
+          <h3>✏️ تعديل جهة تواصل</h3>
+          <p class="muted">قم بتعديل بيانات جهة الاتصال ثم اضغط على حفظ</p>
+        </div>
+        <button class="modal-close-btn" id="closeEditModalBtn" aria-label="إغلاق التعديل">✕</button>
+      </div>
+
+      <form id="editContactForm" novalidate>
+        <input type="hidden" id="edit-id" />
+
+        <div class="form-grid">
+          <!-- Name -->
+          <div class="field">
+            <label for="edit-name">الاسم</label>
+            <input type="text" id="edit-name" placeholder="الاسم بالكامل" maxlength="100" />
+            <span class="error-msg" id="err-edit-name"></span>
+          </div>
+
+          <!-- Email -->
+          <div class="field">
+            <label for="edit-email">البريد الإلكتروني</label>
+            <input type="email" id="edit-email" placeholder="example@domain.com" dir="ltr" maxlength="150" />
+            <span class="error-msg" id="err-edit-email"></span>
+          </div>
+
+          <!-- Phone -->
+          <div class="field">
+            <label for="edit-phone">رقم الجوال</label>
+            <input type="tel" id="edit-phone" placeholder="05xxxxxxxx" dir="ltr" maxlength="20" />
+            <span class="error-msg" id="err-edit-phone"></span>
+          </div>
+
+          <!-- Amanah -->
+          <div class="field">
+            <label for="edit-amanah">الأمانة</label>
+            <select id="edit-amanah" class="form-select">
+              <option value="" disabled>اختر الأمانة</option>
+              <option value="الرياض">الرياض</option>
+              <option value="الاحساء">الاحساء</option>
+              <option value="الباحة">الباحة</option>
+              <option value="الجوف">الجوف</option>
+              <option value="الحدود الشمالية">الحدود الشمالية</option>
+              <option value="حائل">حائل</option>
+              <option value="القصيم">القصيم</option>
+              <option value="المدينة المنورة">المدينة المنورة</option>
+              <option value="المنطقة الشرقية">المنطقة الشرقية</option>
+              <option value="تبوك">تبوك</option>
+              <option value="جازان">جازان</option>
+              <option value="جدة">جدة</option>
+              <option value="نجران">نجران</option>
+              <option value="مكة المكرمة">مكة المكرمة</option>
+              <option value="عسير">عسير</option>
+            </select>
+            <span class="error-msg" id="err-edit-amanah"></span>
+          </div>
+
+          <!-- Org (الجهة) -->
+          <div class="field">
+            <label for="edit-city">الجهة</label>
+            <input type="text" id="edit-city" placeholder="الجهة" maxlength="100" />
+            <span class="error-msg" id="err-edit-city"></span>
+          </div>
+
+          <!-- Job Title -->
+          <div class="field">
+            <label for="edit-job">المسمى الوظيفي</label>
+            <input type="text" id="edit-job" placeholder="المسمى الوظيفي" maxlength="100" />
+          </div>
+
+          <!-- Status (حالة التواصل) -->
+          <div class="field">
+            <label for="edit-status">حالة التواصل</label>
+            <select id="edit-status" class="form-select">
+              <option value="new">جديد</option>
+              <option value="active">نشط</option>
+              <option value="inactive">غير نشط</option>
+            </select>
+            <span class="error-msg" id="err-edit-status"></span>
+          </div>
+
+          <!-- Notes -->
+          <div class="field field-full">
+            <label for="edit-notes">ملاحظات</label>
+            <textarea id="edit-notes" rows="3" placeholder="ملاحظات وتفاصيل..." maxlength="1000"></textarea>
+          </div>
+        </div>
+
+        <div class="modal-actions border-top">
+          <button type="submit" id="editSubmitBtn" class="btn-primary">حفظ</button>
+          <button type="button" id="cancelEditBtn" class="btn-ghost">إلغاء</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal Dialog -->
+  <div class="modal-overlay" id="deleteConfirmModal" aria-hidden="true" role="dialog">
+    <div class="modal-card modal-sm animate-scaleIn">
+      <div class="modal-header header-danger">
+        <div>
+          <h3>⚠️ تأكيد الحذف</h3>
+          <p class="muted">هل أنت متأكد من حذف جهة التواصل هذه؟</p>
+        </div>
+      </div>
+
+      <div class="modal-body">
+        <p class="alert-delete-msg">
+          سيتم حذف بيانات الاتصال التابعة لـ <strong id="deleteTargetName">-</strong> نهائياً من دليل منصة تمكين.
+        </p>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" id="confirmDeleteBtn" class="btn-danger">حذف</button>
+        <button type="button" id="cancelDeleteBtn" class="btn-ghost">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-wrap" id="toastWrap" aria-live="polite"></div>
+
+  <!-- Scripts -->
+  <script src="/config.js?v=1.0.2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/app.js?v=1.0.2"></script>
+</body>
+
+</html>
